@@ -1,39 +1,52 @@
 const http = require('http');
-let countFirst = 0;
-let countSecond = 0;
+const fs = require('fs');
+
+
+// инициализируем счетчики просмотров.  В реальном приложении - база данных!
+let pageViews = {
+  '/': 0,
+  '/about': 0,
+};
+
 const server = http.createServer((req, res) => {
-   if (req.url === '/') {
-      res.writeHead(200, {
-         'Content-Type': 'text/html; charset=UTF-8'
-      });
-      countFirst++;
-      res.end(
-         `<h1>Главная страница</h1>
-         <a href="/about">Переход на страницу About</a>
-         <p>Количество посещений страницы ${countFirst}</p>
-         `
-      );
-   } else if (req.url === '/about') {
-      res.writeHead(200, {
-         'Content-Type': 'text/html; charset=UTF-8'
-      });
-      countSecond++;
-      res.end(
-         `<h1>Страница About</h1>
-         <a href="/">Переход на страницу Главная</a>
-         <p>Количество посещений страницы ${countSecond}</p>
-         `
-      );
-   } else {
-      res.writeHead(404, {
-         'Content-Type': 'text/html; charset=UTF-8'
-      });
-      res.end(
-         `<h1>Ошибка 404</h1>
-         <p>Страница не существует</p>
-         `
-      );
-   }
+  const url = req.url;
+
+  // обработка роутов
+  if (url === '/') {
+    pageViews['/']++;
+    servePage(res, '/', pageViews['/']);
+  } else if (url === '/about') {
+    pageViews['/about']++;
+    servePage(res, '/about', pageViews['/about']);
+  } else {
+    // обработка несуществующих роутов (404)
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('404 Not Found');
+  }
 });
 
-server.listen('3000');
+
+function servePage(res, path, viewCount) {
+  const filePath = path === '/' ? 'index.html' : 'about.html';
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Internal Server Error');
+      console.error(err);
+      return;
+    }
+
+    //вставляем количество просмотров в HTML
+    const html = data.toString().replace('{{viewCount}}', viewCount);
+
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(html);
+  });
+}
+
+
+const port = 3000;
+server.listen(port, () => {
+  console.log(`Сервер запущен на порту ${port}`);
+});
